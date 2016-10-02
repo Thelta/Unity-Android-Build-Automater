@@ -4,7 +4,7 @@ using System.IO;
 using System;
 using System.Collections.Generic;
 
-public static class ZipFilenameExtractor
+public class ZipFilenameExtractor
 {
     public static List<string> GetNames(string zipName)
     {

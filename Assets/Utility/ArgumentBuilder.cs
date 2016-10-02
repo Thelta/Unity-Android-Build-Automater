@@ -34,7 +34,7 @@ public class ArgumentBuilder
     public void AddArgument(string arg, string[] options)
     {
         builder.AppendFormat("{0} ", arg);
-        for(int i = 0; i < options.Length; i++)
+        for (int i = 0; i < options.Length; i++)
         {
             builder.AppendFormat("{0} {1} ", options[i], delimeter);
         }
