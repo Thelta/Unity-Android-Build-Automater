@@ -6,18 +6,19 @@ public class ArgumentBuilder
 {
     StringBuilder builder;
 
-    string delimeter;
+    char delimeter;
 
     public ArgumentBuilder()
     {
+        builder = new StringBuilder();
         int p = (int)System.Environment.OSVersion.Platform;
         if ((p == 4) || (p == 6) || (p == 128))
         {
-            delimeter = "|";
+            delimeter = '|';
         }
         else
         {
-            delimeter = ";";
+            delimeter = ';';
         }
     }
 
@@ -28,17 +29,48 @@ public class ArgumentBuilder
     public void AddArgument(string arg, string option)
     {
         builder.AppendFormat("{0} ", arg);
-        builder.AppendFormat("{0} ", option);
+        AddWrapperOrNot(option);
+
     }
 
     public void AddArgument(string arg, string[] options)
     {
         builder.AppendFormat("{0} ", arg);
-        for (int i = 0; i < options.Length; i++)
+        for (int i = 0; i < options.Length - 1; i++)
         {
-            builder.AppendFormat("{0} {1} ", options[i], delimeter);
+            AddWrapperOrNot(options[i], delimeter);
+        }
+
+        AddWrapperOrNot(options[options.Length - 1]);
+
+    }
+
+    void AddWrapperOrNot(string option)
+    {
+        if (option.IndexOf(' ') < 0)
+        {
+            builder.AppendFormat("{0} ", option);
+        }
+        else
+        {
+            builder.AppendFormat("\"{0}\" ", option);
+        }
+
+    }
+
+    void AddWrapperOrNot(string option, char delimeter)
+    {
+        if (option.IndexOf(' ') < 0)
+        {
+            builder.AppendFormat("{0}{1}", option, delimeter);
+        }
+        else
+        {
+            builder.AppendFormat("\"{0}\"{1}", option, delimeter);
         }
     }
+
+
     public string ToString()
     {
         return builder.ToString();
