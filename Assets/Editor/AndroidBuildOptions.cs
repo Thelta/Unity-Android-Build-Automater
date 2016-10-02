@@ -14,7 +14,8 @@ public class AndroidBuildOptions : EditorWindow
 
     static GUIContent[] javaVersions = null;
 
-    static string javaPath = Path.GetFullPath(Environment.GetEnvironmentVariable("JAVA_HOME") + "\\bin\\java.exe");
+    static string javaPath = Path.GetFullPath(Environment.GetEnvironmentVariable("JAVA_HOME")
+        + Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar + "java.exe");
 
 
     [MenuItem ("File/Android Prebuild Pipeline Options")]
@@ -24,7 +25,6 @@ public class AndroidBuildOptions : EditorWindow
         {
             Process javaVerProcess = new Process();
             javaVerProcess.StartInfo.FileName = javaPath;
-            javaVerProcess.StartInfo.RedirectStandardOutput = true;
             javaVerProcess.StartInfo.RedirectStandardError = true;
             javaVerProcess.StartInfo.Arguments = "-version";
             javaVerProcess.StartInfo.UseShellExecute = false;
