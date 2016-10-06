@@ -25,8 +25,10 @@ public class AndroidBuildStart
         string tempPath = Path.Combine(Path.GetTempPath(),
             "UnityPrebuilder" + Path.DirectorySeparatorChar + GetProjectName());
 
+        //TODO : Wipe all .class files from temp.
         Directory.CreateDirectory(tempPath);
 
+        //builds .class files from android project
         Process javac = new Process();
         javac.StartInfo.FileName = javacPath;
         javac.StartInfo.RedirectStandardError = true;
@@ -46,6 +48,7 @@ public class AndroidBuildStart
         string pluginFolder = Path.Combine(Path.Combine(Application.dataPath, "Plugins"), "Android");
         Directory.CreateDirectory(pluginFolder);
 
+        //creates jar file from .class files
         Process jar = new Process();
         jar.StartInfo.FileName = jarPath;
         jar.StartInfo.RedirectStandardError = true;
@@ -56,17 +59,29 @@ public class AndroidBuildStart
         output = jar.StandardError.ReadToEnd();
         jar.WaitForExit();
 
-        UnityEngine.Debug.Log(BuildJarArguments(tempPath, pluginFolder));
-
         if (output.IndexOf("Exception") > 0 || output.IndexOf("no such file or directory") > 0)
         {
             UnityEngine.Debug.LogException(new JarFailedException(output));
             throw new JarFailedException("This shouldn't have happened.jar building failed.See output");
         }
 
+        //copy libs to plugins folder except class.jar
+        string appPath = Path.Combine(androidProjectPath, "app");
+        string[] allJars = Directory.GetFiles(Path.Combine(appPath, "libs"), "*.jar", SearchOption.AllDirectories);
+        for(int i = 0; i < allJars.Length; i++)
+        {
+            string filename = allJars[i].Substring(allJars[i].LastIndexOf('\\') + 1);
+            if(filename != "classes.jar")
+            {
+                File.Copy(allJars[i], Path.Combine(pluginFolder, filename));
+            }
+            
+        }
 
-
+        //control jar files, so it doesn't create dex error.
     }
+
+    static string BuildJarClassArguments
 
     static string BuildJarArguments(string tempPath, string pluginFolder)
     {
@@ -112,7 +127,6 @@ public class AndroidBuildStart
     static string GetProjectName()
     {
         string[] s = Application.dataPath.Split('/');
-        UnityEngine.Debug.Log(Application.dataPath);
 
         string projectName = s[s.Length - 2];
         return projectName;
