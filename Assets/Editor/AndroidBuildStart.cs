@@ -27,9 +27,6 @@ public class AndroidBuildStart
 
         Directory.CreateDirectory(tempPath);
 
-        UnityEngine.Debug.Log(BuildJavacArguments(tempPath));
-
-
         Process javac = new Process();
         javac.StartInfo.FileName = javacPath;
         javac.StartInfo.RedirectStandardError = true;
@@ -38,13 +35,53 @@ public class AndroidBuildStart
         javac.StartInfo.Arguments = BuildJavacArguments(tempPath);
         javac.Start();
         string output = javac.StandardError.ReadToEnd();
-        javac.WaitForExit();
+        javac.WaitForExit();    
 
-        if(output.IndexOf(" error\n") < 0)
+        if(output.IndexOf(" error\n") >= 0 || output.IndexOf(" error\0") >= 0)
         {
-            UnityEngine.Debug.Log(output);
-            throw new Exception("I am Error");
+            UnityEngine.Debug.LogException(new JavacCompileErrorException(output));
+            throw new JavacCompileErrorException("This shouldn't have happened.javac compiling failed.See output of javac.");
         }
+
+        string pluginFolder = Path.Combine(Path.Combine(Application.dataPath, "Plugins"), "Android");
+        Directory.CreateDirectory(pluginFolder);
+
+        Process jar = new Process();
+        jar.StartInfo.FileName = jarPath;
+        jar.StartInfo.RedirectStandardError = true;
+        jar.StartInfo.UseShellExecute = false;
+        jar.StartInfo.CreateNoWindow = true;
+        jar.StartInfo.Arguments = BuildJarArguments(tempPath, pluginFolder);
+        jar.Start();
+        output = jar.StandardError.ReadToEnd();
+        jar.WaitForExit();
+
+        UnityEngine.Debug.Log(BuildJarArguments(tempPath, pluginFolder));
+
+        if (output.IndexOf("Exception") > 0 || output.IndexOf("no such file or directory") > 0)
+        {
+            UnityEngine.Debug.LogException(new JarFailedException(output));
+            throw new JarFailedException("This shouldn't have happened.jar building failed.See output");
+        }
+
+
+
+    }
+
+    static string BuildJarArguments(string tempPath, string pluginFolder)
+    {
+        ArgumentBuilder builder = new ArgumentBuilder();
+        builder.AddArgument("cf");
+
+        builder.AddArgument(Path.Combine(pluginFolder, "AndroidPlugin.jar"));
+
+        string[] allClass = Directory.GetFiles(tempPath, "*.class", SearchOption.AllDirectories);
+        for (int i = 0; i < allClass.Length; i++)
+        {
+            builder.AddArgument(allClass[i]);
+        }
+
+        return builder.ToString();
     }
 
     static string BuildJavacArguments(string tempPath)
