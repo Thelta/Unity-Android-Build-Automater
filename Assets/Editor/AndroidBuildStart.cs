@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 using UnityEditor;
 using System.Diagnostics;
 using System;
@@ -54,7 +54,7 @@ public class AndroidBuildStart
         jar.StartInfo.RedirectStandardError = true;
         jar.StartInfo.UseShellExecute = false;
         jar.StartInfo.CreateNoWindow = true;
-        jar.StartInfo.Arguments = BuildJarArguments(tempPath, pluginFolder);
+        jar.StartInfo.Arguments = BuildJarBuildArgument(tempPath, pluginFolder);
         jar.Start();
         output = jar.StandardError.ReadToEnd();
         jar.WaitForExit();
@@ -68,33 +68,38 @@ public class AndroidBuildStart
         //copy libs to plugins folder except class.jar
         string appPath = Path.Combine(androidProjectPath, "app");
         string[] allJars = Directory.GetFiles(Path.Combine(appPath, "libs"), "*.jar", SearchOption.AllDirectories);
+        List<string> jarFilenames = new List<string>(allJars.Length + 1);
+        
         for(int i = 0; i < allJars.Length; i++)
         {
             string filename = allJars[i].Substring(allJars[i].LastIndexOf('\\') + 1);
             if(filename != "classes.jar")
             {
                 File.Copy(allJars[i], Path.Combine(pluginFolder, filename));
+                jarFilenames.Add(filename);
             }
-            
         }
 
+        jarFilenames.Add("AndroidPlugin.jar");
+
         //control jar files, so it doesn't create dex error.
+        Dictionary<string, List<string>> classNames = new Dictionary<string, List<string>>();
+        for(int i = 0; i < jarFilenames.Count; i++)
+        {
+            classNames.Add(jarFilenames[i], ZipFilenameExtractor.GetNames(Path.Combine(pluginFolder, jarFilenames[i])));
+        }
     }
 
-    static string BuildJarClassArguments
-
-    static string BuildJarArguments(string tempPath, string pluginFolder)
+    static string BuildJarBuildArgument(string tempPath, string pluginFolder)
     {
         ArgumentBuilder builder = new ArgumentBuilder();
         builder.AddArgument("cf");
 
         builder.AddArgument(Path.Combine(pluginFolder, "AndroidPlugin.jar"));
 
-        string[] allClass = Directory.GetFiles(tempPath, "*.class", SearchOption.AllDirectories);
-        for (int i = 0; i < allClass.Length; i++)
-        {
-            builder.AddArgument(allClass[i]);
-        }
+        builder.AddArgument("-C", tempPath);
+
+        builder.AddArgument(".");
 
         return builder.ToString();
     }
