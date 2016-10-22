@@ -4,7 +4,7 @@ using UnityEditor;
 using System.Diagnostics;
 using System;
 using System.IO;
-using System.Text;
+using System.Linq;
 
 
 public class AndroidBuildStart
@@ -45,6 +45,7 @@ public class AndroidBuildStart
             throw new JavacCompileErrorException("This shouldn't have happened.javac compiling failed.See output of javac.");
         }
 
+        //TODO : Manage old plugin folder.
         string pluginFolder = Path.Combine(Path.Combine(Application.dataPath, "Plugins"), "Android");
         Directory.CreateDirectory(pluginFolder);
 
@@ -82,12 +83,38 @@ public class AndroidBuildStart
 
         jarFilenames.Add("AndroidPlugin.jar");
 
-        //control jar files, so it doesn't create dex error.
-        Dictionary<string, List<string>> classNames = new Dictionary<string, List<string>>();
+        //control .class files in .jar files, so it doesn't create dex error.
+        List<KeyValuePair<string, List<string>>> classNames = new List<KeyValuePair<string, List<string>>>();
         for(int i = 0; i < jarFilenames.Count; i++)
         {
-            classNames.Add(jarFilenames[i], ZipFilenameExtractor.GetNames(Path.Combine(pluginFolder, jarFilenames[i])));
+            classNames.Add(new KeyValuePair<string, List<string>>(
+                jarFilenames[i], ZipFilenameExtractor.GetNames(Path.Combine(pluginFolder, jarFilenames[i]))));
         }
+
+        bool haveDuplicate = false;
+
+        for(int i = 0; i < classNames.Count - 1; i++)
+        {
+            for(int j = i + 1; j < classNames.Count; j++)
+            {
+                string[] duplicate = classNames[i].Value.Intersect(classNames[j].Value).ToArray();
+                if(duplicate.Length > 0)
+                {
+                    haveDuplicate = true;
+                    for(int k = 0; i < duplicate.Length; i++)
+                    {
+                        UnityEngine.Debug.LogError(new HaveDuplicateClassFile(
+                            "Have duplicate files in") + classNames[i].Key + " and " + classNames[j] + " named " + duplicate[k]);
+                    }
+                }
+            }
+        }
+        if(haveDuplicate)
+        {
+            throw new HaveDuplicateClassFile();
+        }
+
+
     }
 
     static string BuildJarBuildArgument(string tempPath, string pluginFolder)
