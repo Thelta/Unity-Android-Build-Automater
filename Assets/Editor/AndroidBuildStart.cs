@@ -25,7 +25,10 @@ public class AndroidBuildStart
         string tempPath = Path.Combine(Path.GetTempPath(),
             "UnityPrebuilder" + Path.DirectorySeparatorChar + GetProjectName());
 
-        //TODO : Wipe all .class files from temp.
+        if (Directory.Exists(tempPath))
+        {
+            Directory.Delete(tempPath, true);
+        }
         Directory.CreateDirectory(tempPath);
 
         //builds .class files from android project
@@ -45,8 +48,16 @@ public class AndroidBuildStart
             throw new JavacCompileErrorException("This shouldn't have happened.javac compiling failed.See output of javac.");
         }
 
-        //TODO : Manage old plugin folder.
         string pluginFolder = Path.Combine(Path.Combine(Application.dataPath, "Plugins"), "Android");
+        if(Directory.Exists(pluginFolder))
+        {
+            string oldPluginFolder = pluginFolder + "_old";
+            if(Directory.Exists(oldPluginFolder))
+            {
+                Directory.Delete(oldPluginFolder, true);
+            }
+            Directory.Move(pluginFolder, oldPluginFolder);
+        }
         Directory.CreateDirectory(pluginFolder);
 
         //creates jar file from .class files
@@ -92,19 +103,22 @@ public class AndroidBuildStart
         }
 
         bool haveDuplicate = false;
-
         for(int i = 0; i < classNames.Count - 1; i++)
         {
             for(int j = i + 1; j < classNames.Count; j++)
             {
                 string[] duplicate = classNames[i].Value.Intersect(classNames[j].Value).ToArray();
-                if(duplicate.Length > 0)
+                if (duplicate.Length > 0)
                 {
-                    haveDuplicate = true;
-                    for(int k = 0; i < duplicate.Length; i++)
+                    for(int k = 0; k < duplicate.Length; k++)
                     {
-                        UnityEngine.Debug.LogError(new HaveDuplicateClassFile(
-                            "Have duplicate files in") + classNames[i].Key + " and " + classNames[j] + " named " + duplicate[k]);
+                        string extension = duplicate[k].Substring(duplicate[k].LastIndexOf('.'));
+                        if(extension == ".class")
+                        {
+                            haveDuplicate = true;
+                            UnityEngine.Debug.LogError(new HaveDuplicateClassFile(
+                                "Have duplicate files in ") + classNames[i].Key + " and " + classNames[j].Key + " named " + duplicate[k]);
+                        }
                     }
                 }
             }
@@ -114,7 +128,7 @@ public class AndroidBuildStart
             throw new HaveDuplicateClassFile();
         }
 
-
+        UnityEngine.Debug.Log("Prebuild is completed");
     }
 
     static string BuildJarBuildArgument(string tempPath, string pluginFolder)
