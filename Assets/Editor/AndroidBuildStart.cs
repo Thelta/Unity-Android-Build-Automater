@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System;
 using System.IO;
 using System.Linq;
+using System.Xml;
 
 
 public class AndroidBuildStart
@@ -116,7 +117,7 @@ public class AndroidBuildStart
                         if(extension == ".class")
                         {
                             haveDuplicate = true;
-                            UnityEngine.Debug.LogError(new HaveDuplicateClassFile(
+                            UnityEngine.Debug.LogError(new HaveDuplicateClassFileException(
                                 "Have duplicate files in ") + classNames[i].Key + " and " + classNames[j].Key + " named " + duplicate[k]);
                         }
                     }
@@ -125,10 +126,21 @@ public class AndroidBuildStart
         }
         if(haveDuplicate)
         {
-            throw new HaveDuplicateClassFile();
+            throw new HaveDuplicateClassFileException();
         }
 
-        UnityEngine.Debug.Log("Prebuild is completed");
+        //Control package name from AndroidManifest.xml
+        string androidManifestPath = Path.Combine(appPath, Path.Combine("src", Path.Combine("main", "AndroidManifest.xml")));
+        XmlDocument androidManifest = new XmlDocument();
+        androidManifest.Load(androidManifestPath);
+        androidManifest.GetElementsByTagName("manifest");
+        string package = androidManifest.DocumentElement.Attributes["package"].Value;
+        if(package != PlayerSettings.bundleIdentifier)
+        {
+            throw new PackageNameNotSameException("Please check that bundle identifier is same as package name in AndroidManifest.xml");
+        }
+
+        UnityEngine.Debug.Log("Prebuild is completed.You can start android build.");
     }
 
     static string BuildJarBuildArgument(string tempPath, string pluginFolder)
