@@ -15,12 +15,13 @@ public class AndroidBuildStart
     static string javaVersion;
 
     static string javaHome =  Path.Combine(Environment.GetEnvironmentVariable("JAVA_HOME"), "bin");
-    static string javacPath = Path.Combine(javaHome, "javac.exe");
-    static string jarPath = Path.Combine(javaHome, "jar.exe");
+    static string javacPath = Path.Combine(javaHome, "javac");
+    static string jarPath = Path.Combine(javaHome, "jar");
 
     [MenuItem("File/Android Prebuild Start")]
     static void StartBuild()
     {
+        EditorUtility.DisplayProgressBar("Android Prebuild", "We are starting.", 0);
         GetStartingValues();
 
         string tempPath = Path.Combine(Path.GetTempPath(),
@@ -32,7 +33,10 @@ public class AndroidBuildStart
         }
         Directory.CreateDirectory(tempPath);
 
+
         //builds .class files from android project
+        EditorUtility.DisplayProgressBar("Android Prebuild", "Building .class files.", 0.11f);
+
         Process javac = new Process();
         javac.StartInfo.FileName = javacPath;
         javac.StartInfo.RedirectStandardError = true;
@@ -41,9 +45,9 @@ public class AndroidBuildStart
         javac.StartInfo.Arguments = BuildJavacArguments(tempPath);
         javac.Start();
         string output = javac.StandardError.ReadToEnd();
-        javac.WaitForExit();    
+        javac.WaitForExit();
 
-        if(output.IndexOf(" error\n") >= 0 || output.IndexOf(" error\0") >= 0)
+        if (output.IndexOf(" error" + Environment.NewLine) >= 0 || output.IndexOf(" errors" + Environment.NewLine) >= 0)
         {
             UnityEngine.Debug.LogException(new JavacCompileErrorException(output));
             throw new JavacCompileErrorException("This shouldn't have happened.javac compiling failed.See output of javac.");
@@ -62,6 +66,8 @@ public class AndroidBuildStart
         Directory.CreateDirectory(pluginFolder);
 
         //creates jar file from .class files
+        EditorUtility.DisplayProgressBar("Android Prebuild", "Creating jar files.", 0.33f);
+
         Process jar = new Process();
         jar.StartInfo.FileName = jarPath;
         jar.StartInfo.RedirectStandardError = true;
@@ -79,6 +85,8 @@ public class AndroidBuildStart
         }
 
         //copy libs to plugins folder except class.jar
+        EditorUtility.DisplayProgressBar("Android Prebuild", "Populating plugins folder with jars.", 0.44f);
+
         string appPath = Path.Combine(androidProjectPath, "app");
         string[] allJars = Directory.GetFiles(Path.Combine(appPath, "libs"), "*.jar", SearchOption.AllDirectories);
         List<string> jarFilenames = new List<string>(allJars.Length + 1);
@@ -96,6 +104,8 @@ public class AndroidBuildStart
         jarFilenames.Add("AndroidPlugin.jar");
 
         //control .class files in .jar files, so it doesn't create dex error.
+        EditorUtility.DisplayProgressBar("Android Prebuild", "Controlling jar files.", 0.48f);
+
         List<KeyValuePair<string, List<string>>> classNames = new List<KeyValuePair<string, List<string>>>();
         for(int i = 0; i < jarFilenames.Count; i++)
         {
@@ -130,6 +140,8 @@ public class AndroidBuildStart
         }
 
         //Control package name from AndroidManifest.xml
+        EditorUtility.DisplayProgressBar("Android Prebuild", "Controlling AndroidManifest.xml.", 0.74f);
+
         string androidManifestPath = Path.Combine(appPath, Path.Combine("src", Path.Combine("main", "AndroidManifest.xml")));
         XmlDocument androidManifest = new XmlDocument();
         androidManifest.Load(androidManifestPath);
@@ -140,6 +152,8 @@ public class AndroidBuildStart
             throw new PackageNameNotSameException("Please check that bundle identifier is same as package name in AndroidManifest.xml");
         }
 
+        EditorUtility.DisplayProgressBar("Android Prebuild", "Finished.", 1);
+        EditorUtility.ClearProgressBar();
         UnityEngine.Debug.Log("Prebuild is completed.You can start android build.");
     }
 
